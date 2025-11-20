@@ -1,0 +1,56 @@
+name: Java Matrix Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }} with Java ${{ matrix.java }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false       # do NOT stop other jobs if one fails
+      max-parallel: 3        # control how many matrix jobs run in parallel
+
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        java: [17, 21]
+
+        include:
+          # You can add special cases here
+          - os: ubuntu-latest
+            java: 21
+            extra-flag: true
+
+        exclude:
+          # Example: skip Windows + Java 21 combo
+          - os: windows-latest
+            java: 21
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Run Tests
+        run: mvn test
+
